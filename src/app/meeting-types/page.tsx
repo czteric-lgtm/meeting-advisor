@@ -88,7 +88,7 @@ export default function MeetingTypesPage() {
         if (!res.ok) return;
         const data = await res.json();
         setItems((prev) =>
-          prev.map((mt) => (mt.id === editing.id ? data.data : mt))
+          prev.map((mt) => (mt.id === editing.id ? (data.data || data) : mt))
         );
       } else {
         const res = await fetch("/api/meeting-types", {
@@ -98,7 +98,7 @@ export default function MeetingTypesPage() {
         });
         if (!res.ok) return;
         const data = await res.json();
-        setItems((prev) => [...prev, data.data]);
+        setItems((prev) => [...prev, (data.data || data)]);
       }
 
       setOpen(false);
