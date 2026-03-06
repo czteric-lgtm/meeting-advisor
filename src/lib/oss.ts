@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import OSS from "ali-oss";
 
 // 阿里云OSS客户端配置

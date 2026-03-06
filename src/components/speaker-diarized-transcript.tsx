@@ -225,7 +225,7 @@ export function generateMinutesMarkdown(
   lines.push("");
   lines.push("## 参会人员");
   
-  const speakers = new Set(sentences.map(s => s.speakerId).filter(Boolean));
+  const speakers = new Set(sentences.map(s => s.speakerId).filter((id): id is string => id !== undefined));
   for (const speakerId of speakers) {
     const name = speakerNames?.get(speakerId) || `说话人${speakerId}`;
     lines.push(`- ${name}`);

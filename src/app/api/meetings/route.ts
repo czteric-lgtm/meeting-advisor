@@ -1,57 +1,89 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { ok, created, badRequest } from "@/lib/api";
-import { randomUUID } from "crypto";
-
-// 内存存储用于快速演示
-const mockMeetings: any[] = [];
+import { ok, created, badRequest, serverError } from "@/lib/api";
+import { db } from "@/lib/db";
+import { meetings, meetingTypes } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 const createMeetingSchema = z.object({
   title: z.string().min(1),
-  meeting_type_id: z.string(),
-  date: z.string().optional()
+  meeting_type_id: z.string().uuid(),
+  date: z.string().datetime().optional()
 });
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const status = searchParams.get("status");
+  try {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
 
-  let data = mockMeetings;
-  if (status) {
-    data = data.filter(m => m.status === status);
+    let query = db
+      .select({
+        id: meetings.id,
+        title: meetings.title,
+        meeting_type_id: meetings.meetingTypeId,
+        meeting_type_name: meetingTypes.name,
+        date: meetings.date,
+        status: meetings.status,
+        created_at: meetings.createdAt
+      })
+      .from(meetings)
+      .leftJoin(meetingTypes, eq(meetings.meetingTypeId, meetingTypes.id))
+      .orderBy(desc(meetings.createdAt));
+
+    if (status) {
+      query = query.where(eq(meetings.status, status));
+    }
+
+    const data = await query;
+    return ok({ data });
+  } catch (error) {
+    console.error("[API /meetings] GET error:", error);
+    return serverError("数据库查询失败");
   }
-
-  return ok(data);
 }
 
 export async function POST(request: NextRequest) {
-  const json = await request.json();
-  const parseResult = createMeetingSchema.safeParse(json);
+  try {
+    const json = await request.json();
+    const parseResult = createMeetingSchema.safeParse(json);
 
-  if (!parseResult.success) {
-    return badRequest("无效的请求参数");
+    if (!parseResult.success) {
+      return badRequest("无效的请求参数: " + parseResult.error.message);
+    }
+
+    const { title, meeting_type_id: meetingTypeId, date } = parseResult.data;
+
+    // 获取会议类型信息
+    const [meetingType] = await db
+      .select()
+      .from(meetingTypes)
+      .where(eq(meetingTypes.id, meetingTypeId))
+      .limit(1);
+
+    const newMeeting = await db
+      .insert(meetings)
+      .values({
+        title,
+        meetingTypeId: meetingTypeId,
+        date: date ? new Date(date) : new Date(),
+        status: "pending",
+        customGoals: meetingType?.goals ?? [],
+        customStrategies: [],
+        discussionPoints: [],
+        aiSuggestions: [],
+        minutes: "",
+        summary: ""
+      })
+      .returning();
+
+    return created({ 
+      data: {
+        ...newMeeting[0],
+        meeting_type: meetingType
+      }
+    });
+  } catch (error) {
+    console.error("[API /meetings] POST error:", error);
+    return serverError("创建会议失败");
   }
-
-  const { title, meeting_type_id: meetingTypeId, date } = parseResult.data;
-
-  const newMeeting = {
-    id: randomUUID(),
-    title,
-    meeting_type_id: meetingTypeId,
-    meeting_type: { name: "客户谈判" },
-    date: date || new Date().toISOString(),
-    status: "pending",
-    customGoals: ["了解客户需求", "达成合作意向"],
-    customStrategies: [
-      { id: "st-001", scenario: "客户询问价格", response: "先了解客户预算", category: "technique", source: "manual" },
-      { id: "st-002", scenario: "客户对产品有疑虑", response: "用数据和案例支撑", category: "principle", source: "manual" }
-    ],
-    discussionPoints: [],
-    aiSuggestions: [],
-    minutes: "",
-    createdAt: new Date().toISOString()
-  };
-
-  mockMeetings.push(newMeeting);
-  return created({ data: newMeeting });
 }
