@@ -1,0 +1,1514 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>会议策略教练</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #f8f6f3;
+        --bg-elevated: #ffffff;
+        --accent: #0d9488;
+        --accent-hover: #0f766e;
+        --accent-soft: rgba(13, 148, 136, 0.12);
+        --border: #e8e6e2;
+        --border-focus: #0d9488;
+        --text: #3d3a36;
+        --text-soft: #6b6560;
+        --danger: #dc2626;
+        --danger-soft: rgba(220, 38, 38, 0.1);
+        --success: #059669;
+        --success-soft: rgba(5, 150, 105, 0.12);
+        --radius: 12px;
+        --radius-sm: 8px;
+      }
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      #app {
+        min-height: 100vh;
+        max-width: 100%;
+        margin: 0;
+        padding: 8px 12px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .app-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+      }
+      .app-header h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: -0.02em;
+      }
+      .subtitle { margin: 4px 0 0; font-size: 14px; color: var(--text-soft); }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        background: var(--bg-elevated);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      }
+      .tabs button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--text-soft);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .tabs button.active {
+        background: var(--accent);
+        color: white;
+      }
+      .tabs button:hover:not(.active) { color: var(--text); background: var(--accent-soft); }
+      .view { display: none; }
+      .view.active { display: block; }
+      .secure-warning {
+        padding: 14px 18px;
+        border-radius: var(--radius);
+        background: var(--danger-soft);
+        border: 1px solid rgba(220, 38, 38, 0.25);
+        color: #b91c1c;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .secure-warning.hidden { display: none; }
+      .panel {
+        background: var(--bg-elevated);
+        border-radius: var(--radius);
+        padding: 12px 14px 14px;
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      }
+      .panel h2 { margin: 0 0 14px; font-size: 16px; font-weight: 600; color: var(--text); }
+      .panel h3 { margin: 16px 0 10px; font-size: 14px; color: var(--text-soft); font-weight: 600; }
+      .btn {
+        flex: 0 0 auto;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--bg-elevated);
+        color: var(--text);
+        padding: 10px 18px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+      }
+      .btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+      }
+      .btn.small { padding: 6px 12px; font-size: 13px; }
+      .btn.danger { color: var(--danger); border-color: rgba(220,38,38,0.3); }
+      .btn.danger:hover { background: var(--danger-soft); }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn:not(:disabled):hover {
+        background: #f0eeeb;
+        border-color: #d4d2ce;
+      }
+      .btn.primary:not(:disabled):hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+      .controls { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+      .status { margin: 0 0 6px; font-size: 13px; color: var(--text-soft); }
+      .hint { margin: 0; font-size: 13px; color: var(--text-soft); line-height: 1.5; }
+      .transcript {
+        min-height: 120px;
+        max-height: 320px;
+        overflow-y: auto;
+        padding: 14px 16px;
+        border-radius: var(--radius-sm);
+        background: #fafaf9;
+        border: 1px solid var(--border);
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+      }
+      .transcript.empty { color: var(--text-soft); }
+      .transcript-segments { display: flex; flex-direction: column-reverse; gap: 8px; }
+      .transcript-seg { display: flex; gap: 8px; align-items: flex-start; }
+      .transcript-seg .speaker { flex-shrink: 0; font-weight: 600; color: var(--accent); min-width: 3em; }
+      .transcript-seg .text { flex: 1; word-break: break-word; }
+      .transcript-seg.interim .text { color: var(--text-soft); font-style: italic; }
+      .suggestions { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+      .suggestion-item {
+        border-radius: var(--radius-sm);
+        padding: 12px 14px;
+        background: var(--success-soft);
+        border: 1px solid rgba(5, 150, 105, 0.2);
+        font-size: 14px;
+      }
+      .suggestion-label { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; font-weight: 500; color: var(--success); }
+      .suggestion-label-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+      .suggestion-text { margin: 0; color: var(--text); }
+      .suggestion-placeholder { display: none; padding: 10px 14px; font-size: 13px; color: var(--text-soft); font-style: italic; }
+      .suggestion-placeholder.visible { display: list-item; }
+      .suggestion-no-match { padding: 10px 14px; font-size: 13px; color: var(--text-soft); font-style: italic; }
+      .app-footer { margin-top: auto; font-size: 12px; color: var(--text-soft); padding-top: 10px; border-top: 1px solid var(--border); }
+
+      /* 策略库 */
+      .type-list { list-style: none; padding: 0; margin: 0; }
+      .type-item {
+        margin-bottom: 10px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--bg-elevated);
+        overflow: hidden;
+      }
+      .type-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.2s ease;
+      }
+      .type-head:hover { background: #fafaf9; }
+      .type-name { font-weight: 600; font-size: 15px; color: var(--text); }
+      .type-actions { display: flex; gap: 8px; }
+      .type-body { padding: 0 16px 16px; border-top: 1px solid var(--border); display: none; }
+      .type-item.expanded .type-body { display: block; }
+      .strategy-list { list-style: none; padding: 0; margin: 10px 0 0; }
+      .strategy-row {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr auto;
+        gap: 12px;
+        align-items: start;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+      }
+      .strategy-row:last-child { border-bottom: none; }
+      .strategy-row .scene { color: var(--accent); word-break: break-all; font-weight: 500; }
+      .strategy-row .response { color: var(--text); word-break: break-word; }
+      .strategy-row .actions { display: flex; gap: 6px; }
+      .add-strategy-form {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px dashed var(--border);
+        display: grid;
+        gap: 10px;
+      }
+      .add-strategy-form label { font-size: 13px; color: var(--text-soft); font-weight: 500; }
+      .add-strategy-form input, .add-strategy-form textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--bg-elevated);
+        color: var(--text);
+        font-size: 14px;
+        transition: border-color 0.2s ease;
+      }
+      .add-strategy-form input:focus, .add-strategy-form textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      .add-strategy-form textarea { min-height: 64px; resize: vertical; }
+      .add-type-row { display: flex; gap: 10px; margin-top: 14px; align-items: center; }
+      .add-type-row input { flex: 1; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text); font-size: 14px; }
+
+      /* 批量维护 */
+      .batch-section {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px dashed var(--border);
+      }
+      .batch-section h4 { margin: 0 0 10px; font-size: 14px; color: var(--accent); font-weight: 600; }
+      .batch-textarea {
+        width: 100%;
+        min-height: 100px;
+        padding: 12px 14px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: #fafaf9;
+        color: var(--text);
+        font-size: 14px;
+        resize: vertical;
+        margin-bottom: 10px;
+      }
+      .batch-api-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+      .batch-api-row input { flex: 1; min-width: 140px; padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text); font-size: 13px; }
+      .batch-api-row input::placeholder { color: var(--text-soft); }
+      .batch-parse-status { font-size: 13px; color: var(--text-soft); margin: 6px 0; min-height: 20px; }
+      .batch-parse-status.error { color: var(--danger); }
+      .batch-parse-status.loading { color: var(--accent); }
+      .batch-results { margin-top: 14px; max-height: 220px; overflow-y: auto; }
+      .batch-results .strategy-row { padding: 8px 0; }
+      .batch-add-btn { margin-top: 10px; }
+
+      /* 进行会议 */
+      .meeting-setup { margin-bottom: 20px; }
+      .meeting-setup .row { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+      .meeting-setup label { font-size: 14px; color: var(--text-soft); min-width: 90px; }
+      .meeting-setup select {
+        padding: 10px 14px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--bg-elevated);
+        color: var(--text);
+        font-size: 14px;
+        min-width: 200px;
+      }
+      .current-strategies { margin-top: 20px; }
+      .current-strategies .strategy-list { margin-top: 10px; }
+      .empty-tip { color: var(--text-soft); font-size: 14px; margin: 10px 0; }
+      .checklist-list { list-style: none; padding: 0; margin: 0 0 12px; }
+      .checklist-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+      .checklist-item:last-child { border-bottom: none; }
+      .checklist-item .status-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; }
+      .checklist-item.pending .status-dot { background: #f59e0b; }
+      .checklist-item.done .status-dot { background: var(--success); }
+      .checklist-item .content { flex: 1; }
+      .checklist-item .title { font-weight: 500; color: var(--text); }
+      .checklist-item.done .title { text-decoration: line-through; color: var(--text-soft); }
+      .checklist-item .summary { margin-top: 6px; font-size: 13px; color: var(--text-soft); line-height: 1.5; padding: 8px 10px; background: #fafaf9; border-radius: var(--radius-sm); }
+      .checklist-item .actions { flex-shrink: 0; }
+      .add-checklist-row { display: flex; gap: 10px; }
+      .add-checklist-row input { flex: 1; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-elevated); color: var(--text); font-size: 14px; }
+      .meeting-notes { min-height: 140px; font-size: 14px; }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+
+      /* 会议界面 - 用户友好布局 */
+      .meeting-view { display: flex; flex-direction: column; gap: 6px; }
+      .meeting-control-bar {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        padding: 6px 10px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 10px;
+      }
+      .meeting-control-bar .control-group { display: flex; align-items: center; gap: 8px; }
+      .meeting-control-bar .control-group.type-block { position: relative; }
+      .setup-dropdown {
+        display: none;
+        position: absolute;
+        left: 0;
+        top: 100%;
+        margin-top: 6px;
+        z-index: 100;
+        min-width: 520px;
+        max-width: 640px;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        padding: 12px 14px;
+      }
+      .setup-dropdown.open { display: block; }
+      .setup-dropdown-inner .add-strategy-form { margin-top: 10px; }
+      .setup-dropdown-inner .add-strategy-form label { display: block; margin: 6px 0 4px; font-size: 12px; color: var(--text-soft); }
+      .setup-dropdown-inner .add-strategy-form input,
+      .setup-dropdown-inner .add-strategy-form textarea { width: 100%; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 13px; margin-bottom: 4px; }
+      .setup-dropdown-inner .add-strategy-form textarea { min-height: 60px; resize: vertical; }
+      .setup-dropdown-inner .strategy-list { max-height: 200px; overflow-y: auto; margin: 8px 0; }
+      .setup-dropdown-inner .strategy-row { padding: 8px 0; font-size: 13px; }
+      .meeting-control-bar .control-group label { font-size: 13px; color: var(--text-soft); margin-right: 4px; }
+      .meeting-control-bar select { padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-elevated); font-size: 14px; min-width: 140px; }
+      .meeting-control-bar .record-btn { padding: 12px 24px; font-size: 15px; font-weight: 600; min-width: 120px; }
+      .meeting-control-bar .record-btn.recording { background: var(--danger); border-color: var(--danger); color: white; }
+      .meeting-control-bar .record-btn.recording:hover { background: #b91c1c; border-color: #b91c1c; }
+      .meeting-control-bar .speaker-btn { padding: 8px 14px; font-size: 13px; }
+      .meeting-control-bar .mode-tabs { display: flex; }
+      .meeting-control-bar .mode-tabs label { padding: 8px 14px; border: 1px solid var(--border); font-size: 13px; cursor: pointer; margin: 0; display: flex; align-items: center; }
+      .meeting-control-bar .mode-tabs label:first-of-type { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+      .meeting-control-bar .mode-tabs label:last-of-type { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: none; }
+      .meeting-control-bar .mode-tabs input { display: none; }
+      .meeting-control-bar .mode-tabs label:has(input:checked) { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+      .meeting-control-bar .status-text { font-size: 13px; color: var(--text-soft); margin-left: auto; }
+      .meeting-main {
+        display: grid;
+        grid-template-columns: 1fr 2fr 1fr;
+        gap: 8px;
+        margin-bottom: 8px;
+        min-height: calc(100vh - 180px);
+      }
+      .meeting-main > * { min-width: 0; }
+      .meeting-transcript-wrap {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+      }
+      .meeting-transcript-wrap h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--text); }
+      .meeting-transcript-wrap .transcript { flex: 1; min-height: 100px; font-size: 13px; line-height: 1.55; }
+      .meeting-suggestions-wrap {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+      }
+      .meeting-suggestions-wrap h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--text); }
+      .meeting-suggestions-wrap .suggestions { flex: 1; overflow-y: auto; }
+      .meeting-checklist-wrap {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+      }
+      .meeting-checklist-wrap h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--text); }
+      .meeting-checklist-wrap .checklist-list { flex: 1; overflow-y: auto; margin: 0 0 8px; }
+      .meeting-checklist-wrap .add-checklist-row { margin-top: auto; }
+      #transcriptWrap .meeting-manual-wrap { display: none; }
+      #transcriptWrap.manual-mode .transcript { display: none !important; }
+      #transcriptWrap.manual-mode .meeting-manual-wrap { display: block !important; }
+      .meeting-manual-wrap .hint { margin-bottom: 10px; }
+      .meeting-accordion {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 8px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column-reverse;
+      }
+      .meeting-accordion:last-child { margin-bottom: 0; }
+      .meeting-accordion-head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 14px;
+        background: var(--bg-elevated);
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+        user-select: none;
+        transition: background 0.2s ease;
+      }
+      .meeting-accordion-head:hover { background: #fafaf9; }
+      .meeting-accordion-head .expand-icon { font-size: 12px; color: var(--text-soft); transition: transform 0.2s ease; }
+      .meeting-accordion.expanded .meeting-accordion-head .expand-icon { transform: rotate(180deg); }
+      .meeting-accordion.expanded .meeting-accordion-body { display: block; }
+      .meeting-accordion-body { display: none; padding: 12px 14px; border-bottom: 1px solid var(--border); background: #fafaf9; }
+      .meeting-accordion .hint { margin-bottom: 12px; }
+      .meeting-accordion .add-type-row, .meeting-accordion .add-checklist-row { margin-top: 12px; }
+      .meeting-accordion .strategy-list { margin: 10px 0; }
+      .meeting-accordion .checklist-list { margin: 0 0 12px; }
+      .meeting-accordion .meeting-notes { min-height: 100px; }
+      .meeting-replay-wrap {
+        display: none;
+        padding: 16px 20px;
+        background: var(--success-soft);
+        border: 1px solid rgba(5,150,105,0.25);
+        border-radius: var(--radius);
+        margin-bottom: 20px;
+      }
+      .meeting-replay-wrap.visible { display: block; }
+      .meeting-replay-wrap h3 { margin: 0 0 12px; font-size: 15px; font-weight: 600; color: var(--text); }
+      .input-mode-row { display: flex; gap: 20px; margin-bottom: 14px; }
+      .input-mode-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text); }
+      .input-mode-row input[type="radio"] { accent-color: var(--accent); width: 16px; height: 16px; }
+      .manual-input { min-height: 120px; }
+      #viewMeeting:fullscreen, #viewMeeting:-webkit-full-screen { background: var(--bg); padding: 24px; overflow: auto; }
+      #viewMeeting:fullscreen .meeting-view, #viewMeeting:-webkit-full-screen .meeting-view { max-width: 1400px; margin: 0 auto; }
+      .notes-editor { display: flex; flex-direction: column; gap: 8px; }
+      .notes-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .notes-textarea { flex: 1; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; line-height: 1.8; resize: vertical; font-family: inherit; }
+      .notes-textarea:focus { outline: none; border-color: var(--accent); }
+      .notes-line-numbers { padding: 12px 8px 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fafaf9; font-size: 13px; line-height: 1.8; color: var(--text-soft); user-select: none; white-space: pre; overflow-y: auto; flex-shrink: 0; width: 40px; }
+      .notes-editor-row { display: flex; gap: 0; min-height: 2.5em; max-height: 9em; }
+      .notes-editor-row .notes-line-numbers { border-right: none; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+      .notes-editor-row .notes-textarea { flex: 1; min-height: 2.5em; max-height: 9em; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; border-left: none; line-height: 1.8; }
+      @media (max-width: 900px) {
+        #app { padding: 20px 16px 32px; }
+        .meeting-main { grid-template-columns: 1fr; }
+        .meeting-control-bar { flex-direction: column; align-items: stretch; }
+        .meeting-control-bar .status-text { margin-left: 0; }
+        .strategy-row { grid-template-columns: 1fr auto; }
+        .strategy-row .response { grid-column: 1 / -1; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <div>
+          <h1>会议策略教练</h1>
+          <p class="subtitle">边开会，边给你实时战术建议的“隐形教练”</p>
+        </div>
+        <nav class="tabs" role="tablist">
+          <button type="button" class="tab-btn active" data-tab="library">策略库</button>
+          <button type="button" class="tab-btn" data-tab="meeting">进行会议</button>
+        </nav>
+      </header>
+
+      <div id="secureWarning" class="secure-warning">
+        <strong>当前是本地文件打开，无法使用麦克风。</strong><br>
+        请用 Cursor 的 Live Server 打开：右键 <code>index.html</code> → <strong>Open with Live Server</strong>。
+      </div>
+
+      <!-- 策略库视图 -->
+      <div id="viewLibrary" class="view active">
+        <section class="panel">
+          <h2>会议类型与策略</h2>
+          <p class="hint">为每种会议类型维护「场景」与「应对策略」。场景填写匹配关键词（多个用逗号分隔）；会议中会根据语义自动匹配并给出应对建议。支持批量维护与 AI 解析。</p>
+          <ul id="typeList" class="type-list"></ul>
+          <div class="add-type-row">
+            <input type="text" id="newTypeName" placeholder="输入新会议类型名称" />
+            <button type="button" id="addTypeBtn" class="btn primary">添加会议类型</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- 进行会议视图 -->
+      <div id="viewMeeting" class="view">
+        <div class="meeting-view">
+          <!-- 顶部控制栏 -->
+          <div class="meeting-control-bar">
+            <div class="control-group type-block">
+              <label>会议类型</label>
+              <select id="meetingTypeSelect">
+                <option value="">请选择</option>
+              </select>
+              <button type="button" id="setupToggleBtn" class="btn small">会议设置</button>
+              <div id="setupDropdown" class="setup-dropdown">
+              <div class="setup-dropdown-inner">
+                <p class="hint" style="margin:0 0 8px;">选择类型后加载策略，可在此增删改本场专属策略。</p>
+                <div class="current-strategies">
+                  <h4 style="margin:0 0 8px; font-size:13px;">本场会议策略</h4>
+                  <ul id="currentStrategyList" class="strategy-list"></ul>
+                  <p id="currentStrategyEmpty" class="empty-tip">请先选择会议类型，或直接添加策略。</p>
+                  <div class="add-strategy-form" id="addCurrentStrategyForm">
+                    <label>场景（关键词，逗号分隔）</label>
+                    <input type="text" id="currentScene" placeholder="例如：价格,预算,报价" />
+                    <label>应对策略</label>
+                    <textarea id="currentResponse" placeholder="例如：先让对方说清预算和决策流程，再给出方案。"></textarea>
+                    <button type="button" id="addCurrentStrategyBtn" class="btn primary small">添加策略</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+            <div class="control-group">
+              <button id="startBtn" type="button" class="btn primary record-btn">开始录音</button>
+              <button id="stopBtn" type="button" class="btn record-btn" disabled>停止录音</button>
+            </div>
+            <div class="control-group">
+              <button id="switchSpeakerBtn" type="button" class="btn speaker-btn" disabled>说话人：<span id="currentSpeakerLabel">我</span></button>
+            </div>
+            <div class="control-group mode-tabs">
+              <label><input type="radio" name="inputMode" value="voice" checked /><span>语音</span></label>
+              <label><input type="radio" name="inputMode" value="manual" /><span>手动</span></label>
+            </div>
+            <span id="status" class="status-text">麦克风未启用</span>
+          </div>
+
+          <!-- 录音回放 -->
+          <div id="replayPanel" class="meeting-replay-wrap">
+            <h3>录音回放</h3>
+            <p class="hint" style="margin:0 0 8px;">会议结束后可在此回播，或下载保存。</p>
+            <audio id="replayAudio" controls style="width:100%; margin-bottom:10px;"></audio>
+            <p class="hint" style="margin:0;">可 <a id="downloadRecording" href="#" download="meeting-recording.webm">下载录音文件</a> 保存到本地</p>
+          </div>
+
+          <!-- 主内容区：三列 转写1/4 + 策略1/2 + 待沟通1/4 -->
+          <div class="meeting-main">
+            <div class="meeting-transcript-wrap">
+              <h3>实时转写</h3>
+              <div id="transcriptWrap">
+                <div id="transcript" class="transcript"></div>
+                <div id="manualPanel" class="meeting-manual-wrap">
+                  <p class="hint" style="margin:0 0 10px;">在此输入或粘贴会议内容，可从飞书/钉钉/腾讯会议等自带字幕复制。</p>
+                  <textarea id="manualTranscript" class="transcript manual-input" placeholder="输入或粘贴会议转写内容…" rows="10"></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="meeting-suggestions-wrap">
+              <h3>策略建议</h3>
+              <ul id="suggestions" class="suggestions"></ul>
+            </div>
+            <div class="meeting-checklist-wrap">
+              <h3>待沟通清单</h3>
+              <p class="hint" style="margin:0 0 8px; font-size:12px;">会前填写，提及到时会自动标记已沟通。</p>
+              <ul id="checklistList" class="checklist-list"></ul>
+              <div class="add-checklist-row">
+                <input type="text" id="newChecklistItem" placeholder="输入待沟通事项" />
+                <button type="button" id="addChecklistBtn" class="btn primary small">添加</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 可折叠区域 -->
+          <div class="meeting-accordion" id="accordionNotes">
+            <div class="meeting-accordion-head">
+              <span>会议纪要</span>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="meeting-accordion-body">
+              <div class="notes-editor">
+                <div class="notes-toolbar">
+                  <button type="button" id="notesIndentBtn" class="btn small">增加缩进</button>
+                  <button type="button" id="notesOutdentBtn" class="btn small">减少缩进</button>
+                  <button type="button" id="notesCopyBtn" class="btn primary small">一键复制全部</button>
+                </div>
+                <div class="notes-editor-row">
+                  <div id="notesLineNumbers" class="notes-line-numbers">1</div>
+                  <textarea id="meetingNotes" class="notes-textarea" placeholder="记录会议要点、决议、待办…（Tab 增加缩进，Shift+Tab 减少缩进）"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="app-footer">
+        <small>本地 MVP，数据保存在浏览器本地，不会上传。</small>
+      </footer>
+    </div>
+
+    <script>
+(function () {
+      var STORAGE_TYPES = "meetingStrategy_types";
+      var STORAGE_STRATEGIES = "meetingStrategy_strategies";
+      var STORAGE_MEETING_NOTES = "meetingStrategy_meetingNotes";
+      var DEFAULT_AI_KEY = "AIzaSyClnM7bHOd6mPp7Z5Vo3TrbHO_SVo9kK5c";
+      var GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+
+      function id() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+      function getTypes() {
+        try {
+          var raw = localStorage.getItem(STORAGE_TYPES);
+          return raw ? JSON.parse(raw) : [];
+        } catch (e) { return []; }
+      }
+      function setTypes(arr) { localStorage.setItem(STORAGE_TYPES, JSON.stringify(arr)); }
+
+      function getStrategiesByType() {
+        try {
+          var raw = localStorage.getItem(STORAGE_STRATEGIES);
+          return raw ? JSON.parse(raw) : {};
+        } catch (e) { return {}; }
+      }
+      function setStrategiesByType(obj) { localStorage.setItem(STORAGE_STRATEGIES, JSON.stringify(obj)); }
+
+      function getStrategiesForType(typeId) {
+        var byType = getStrategiesByType();
+        return byType[typeId] || [];
+      }
+      function setStrategiesForType(typeId, list) {
+        var byType = getStrategiesByType();
+        byType[typeId] = list;
+        setStrategiesByType(byType);
+      }
+
+      // 本场会议策略（内存，不写回策略库）
+      var currentMeetingStrategies = [];
+      // 待沟通清单
+      var checklistItems = [];
+
+      var typeListEl = document.getElementById("typeList");
+      var newTypeNameEl = document.getElementById("newTypeName");
+      var addTypeBtn = document.getElementById("addTypeBtn");
+      var meetingTypeSelect = document.getElementById("meetingTypeSelect");
+      var currentStrategyListEl = document.getElementById("currentStrategyList");
+      var currentStrategyEmpty = document.getElementById("currentStrategyEmpty");
+      var currentSceneEl = document.getElementById("currentScene");
+      var currentResponseEl = document.getElementById("currentResponse");
+      var addCurrentStrategyBtn = document.getElementById("addCurrentStrategyBtn");
+      var addCurrentStrategyForm = document.getElementById("addCurrentStrategyForm");
+      var startBtn = document.getElementById("startBtn");
+      var stopBtn = document.getElementById("stopBtn");
+      var statusEl = document.getElementById("status");
+      var transcriptEl = document.getElementById("transcript");
+      var suggestionsEl = document.getElementById("suggestions");
+      var manualPanel = document.getElementById("manualPanel");
+      var manualTranscript = document.getElementById("manualTranscript");
+      var checklistListEl = document.getElementById("checklistList");
+      var newChecklistItemEl = document.getElementById("newChecklistItem");
+      var addChecklistBtn = document.getElementById("addChecklistBtn");
+      var meetingNotesEl = document.getElementById("meetingNotes");
+      var secureWarning = document.getElementById("secureWarning");
+      var viewLibrary = document.getElementById("viewLibrary");
+      var viewMeeting = document.getElementById("viewMeeting");
+
+      if (window.isSecureContext) secureWarning.classList.add("hidden");
+
+      // 策略库：渲染类型列表
+      function renderTypeList() {
+        var types = getTypes();
+        typeListEl.innerHTML = "";
+        types.forEach(function (t) {
+          var li = document.createElement("li");
+          li.className = "type-item";
+          li.dataset.typeId = t.id;
+          var head = document.createElement("div");
+          head.className = "type-head";
+          head.innerHTML = "<span class=\"type-name\">" + escapeHtml(t.name) + "</span><span class=\"type-actions\"><button type=\"button\" class=\"btn small danger delete-type-btn\" data-type-id=\"" + escapeAttr(t.id) + "\">删除类型</button></span>";
+          var body = document.createElement("div");
+          body.className = "type-body";
+          var strategies = getStrategiesForType(t.id);
+          var ul = document.createElement("ul");
+          ul.className = "strategy-list";
+          strategies.forEach(function (s) {
+            ul.appendChild(makeStrategyRow(s, t.id, true));
+          });
+          var addForm = document.createElement("div");
+          addForm.className = "add-strategy-form";
+          addForm.innerHTML = "<label>场景（关键词，逗号分隔）</label><input type=\"text\" class=\"lib-scene-input\" placeholder=\"例如：价格,预算\" /><label>应对策略</label><textarea class=\"lib-response-input\" placeholder=\"应对策略内容\"></textarea><button type=\"button\" class=\"btn primary small add-lib-strategy-btn\">添加策略</button>";
+          body.appendChild(ul);
+          body.appendChild(addForm);
+
+          var batchSection = document.createElement("div");
+          batchSection.className = "batch-section";
+          batchSection.innerHTML = "<h4>批量维护（AI 解析）</h4><p class=\"hint\" style=\"margin:0 0 8px;\">粘贴含「可能性」「典型表现」「应对方式」等关键词的文本，AI 将自动识别场景与应对策略。（使用 Google AI Studio / Gemini）</p><textarea class=\"batch-textarea\" placeholder=\"例如：\n可能性：对方对价格敏感\n典型表现：反复提及预算、报价、成本\n应对方式：先了解决策流程，再给出方案...\n\n可能性：对方时间紧张\n典型表现：说太忙、没空、下次再说\n应对方式：给出一个默认推荐，并约定下一步具体时间\"></textarea><div class=\"batch-api-row\"><input type=\"password\" class=\"batch-api-key\" placeholder=\"Google AI Studio API Key\" /></div><div class=\"batch-parse-status\"></div><button type=\"button\" class=\"btn primary small batch-parse-btn\">AI 解析</button><div class=\"batch-results\" style=\"display:none;\"></div><button type=\"button\" class=\"btn primary small batch-add-btn\" style=\"display:none;\">批量添加</button>";
+          body.appendChild(batchSection);
+
+          var batchTextarea = batchSection.querySelector(".batch-textarea");
+          var batchApiKey = batchSection.querySelector(".batch-api-key");
+          var batchStatus = batchSection.querySelector(".batch-parse-status");
+          var batchParseBtn = batchSection.querySelector(".batch-parse-btn");
+          var batchResults = batchSection.querySelector(".batch-results");
+          var batchAddBtn = batchSection.querySelector(".batch-add-btn");
+
+          var apiKeyStorage = "meetingStrategy_apiKey";
+          try {
+            var savedKey = localStorage.getItem(apiKeyStorage);
+            batchApiKey.value = savedKey || DEFAULT_AI_KEY;
+          } catch (e) { batchApiKey.value = DEFAULT_AI_KEY; }
+
+          var parsedForType = [];
+
+          batchParseBtn.addEventListener("click", function () {
+            var raw = (batchTextarea.value || "").trim();
+            var apiKey = (batchApiKey.value || "").trim();
+            if (!raw) { batchStatus.textContent = "请先粘贴待解析的文本"; batchStatus.classList.add("error"); return; }
+            if (!apiKey) { batchStatus.textContent = "请填写 API Key"; batchStatus.classList.add("error"); return; }
+            try { localStorage.setItem(apiKeyStorage, apiKey); } catch (e) {}
+            batchStatus.textContent = "正在解析…";
+            batchStatus.classList.remove("error");
+            batchStatus.classList.add("loading");
+            batchParseBtn.disabled = true;
+            var url = GEMINI_API + "?key=" + encodeURIComponent(apiKey);
+            var prompt = "你是一个会议策略解析助手。请从以下文本中解析出会议策略。\n\n识别规则：\n1) 场景：通过「可能性」「典型表现」「场景」等关键词识别会议中可能出现的场景，提取为可匹配的关键词（多个用逗号分隔，如：价格,预算,报价）；\n2) 应对策略：通过「应对方式」「建议」「应对策略」等关键词识别对应的建议内容。\n\n请只输出一个 JSON 数组，格式为：[{\"scene\":\"关键词1,关键词2\",\"response\":\"应对策略内容\"}]，不要输出 markdown、代码块或任何其他内容，仅输出纯 JSON 数组。\n\n待解析文本：\n" + raw;
+            fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3 } })
+            })
+              .then(function (r) { return r.json(); })
+              .then(function (data) {
+                batchParseBtn.disabled = false;
+                batchStatus.classList.remove("loading");
+                if (data.error) { batchStatus.textContent = "API 错误：" + (data.error.message || JSON.stringify(data.error)); batchStatus.classList.add("error"); return; }
+                var content = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) || "";
+                content = content.replace(/^```[\w]*\n?|\n?```$/g, "").trim();
+                var arr = [];
+                try { arr = JSON.parse(content); } catch (e) { batchStatus.textContent = "解析失败，AI 返回非 JSON：" + content.slice(0, 100); batchStatus.classList.add("error"); return; }
+                if (!Array.isArray(arr)) { batchStatus.textContent = "解析失败，需为数组格式"; batchStatus.classList.add("error"); return; }
+                parsedForType = arr.filter(function (x) { return x && (x.scene || x.response); }).map(function (x) { return { id: id(), scene: String(x.scene || "").trim(), response: String(x.response || "").trim() }; }).filter(function (x) { return x.scene && x.response; });
+                batchStatus.textContent = "解析到 " + parsedForType.length + " 条策略，请核对后批量添加";
+                batchStatus.classList.remove("error");
+                batchResults.style.display = "block";
+                batchResults.innerHTML = "";
+                parsedForType.forEach(function (s) {
+                  var row = document.createElement("div");
+                  row.className = "strategy-row";
+                  row.innerHTML = "<span class=\"scene\">" + escapeHtml(s.scene) + "</span><span class=\"response\">" + escapeHtml(s.response) + "</span><span class=\"actions\"><button type=\"button\" class=\"btn small delete-strategy-btn\">移除</button></span>";
+                  row.querySelector(".delete-strategy-btn").addEventListener("click", function () {
+                    parsedForType = parsedForType.filter(function (x) { return x.id !== s.id; });
+                    row.remove();
+                    if (parsedForType.length === 0) { batchResults.style.display = "none"; batchAddBtn.style.display = "none"; batchStatus.textContent = ""; }
+                  });
+                  batchResults.appendChild(row);
+                });
+                batchAddBtn.style.display = parsedForType.length ? "inline-flex" : "none";
+              })
+              .catch(function (err) {
+                batchParseBtn.disabled = false;
+                batchStatus.classList.remove("loading");
+                batchStatus.textContent = "请求失败：" + (err.message || String(err));
+                batchStatus.classList.add("error");
+              });
+          });
+
+          batchAddBtn.addEventListener("click", function () {
+            if (parsedForType.length === 0) return;
+            var list = getStrategiesForType(t.id);
+            parsedForType.forEach(function (s) { list.push({ id: s.id, scene: s.scene, response: s.response }); });
+            setStrategiesForType(t.id, list);
+            parsedForType = [];
+            batchResults.innerHTML = "";
+            batchResults.style.display = "none";
+            batchAddBtn.style.display = "none";
+            batchStatus.textContent = "已批量添加";
+            renderTypeList();
+          });
+          head.addEventListener("click", function (e) {
+            if (!e.target.closest(".type-actions")) {
+              li.classList.toggle("expanded");
+            }
+          });
+          head.querySelector(".delete-type-btn").addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (confirm("确定删除该会议类型及其全部策略？")) {
+              var arr = getTypes().filter(function (x) { return x.id !== t.id; });
+              setTypes(arr);
+              var byType = getStrategiesByType();
+              delete byType[t.id];
+              setStrategiesByType(byType);
+              renderTypeList();
+              renderMeetingTypeSelect();
+            }
+          });
+          addForm.querySelector(".add-lib-strategy-btn").addEventListener("click", function () {
+            var sceneInput = addForm.querySelector(".lib-scene-input");
+            var responseInput = addForm.querySelector(".lib-response-input");
+            var scene = (sceneInput.value || "").trim();
+            var response = (responseInput.value || "").trim();
+            if (!scene || !response) return;
+            var list = getStrategiesForType(t.id);
+            list.push({ id: id(), scene: scene, response: response });
+            setStrategiesForType(t.id, list);
+            sceneInput.value = "";
+            responseInput.value = "";
+            renderTypeList();
+          });
+          li.appendChild(head);
+          li.appendChild(body);
+          typeListEl.appendChild(li);
+        });
+      }
+
+      function makeStrategyRow(s, typeId, isLibrary) {
+        var li = document.createElement("li");
+        li.className = "strategy-row";
+        li.dataset.strategyId = s.id;
+        li.innerHTML = "<span class=\"scene\">" + escapeHtml(s.scene) + "</span><span class=\"response\">" + escapeHtml(s.response) + "</span><span class=\"actions\"><button type=\"button\" class=\"btn small edit-strategy-btn\">编辑</button><button type=\"button\" class=\"btn small delete-strategy-btn\">删除</button></span>";
+        li.querySelector(".delete-strategy-btn").addEventListener("click", function () {
+          if (isLibrary) {
+            var list = getStrategiesForType(typeId).filter(function (x) { return x.id !== s.id; });
+            setStrategiesForType(typeId, list);
+            renderTypeList();
+          } else {
+            currentMeetingStrategies = currentMeetingStrategies.filter(function (x) { return x.id !== s.id; });
+            renderCurrentStrategyList();
+          }
+        });
+        li.querySelector(".edit-strategy-btn").addEventListener("click", function () {
+          var sceneCell = li.querySelector(".scene");
+          var responseCell = li.querySelector(".response");
+          var actionsCell = li.querySelector(".actions");
+          var origScene = sceneCell.textContent;
+          var origResponse = responseCell.textContent;
+          sceneCell.innerHTML = "<input type=\"text\" class=\"edit-scene\" value=\"" + escapeAttr(origScene) + "\" />";
+          responseCell.innerHTML = "<textarea class=\"edit-response\" rows=\"2\">" + escapeHtml(origResponse) + "</textarea>";
+          actionsCell.innerHTML = "<button type=\"button\" class=\"btn small primary save-edit-btn\">保存</button><button type=\"button\" class=\"btn small cancel-edit-btn\">取消</button>";
+          li.querySelector(".save-edit-btn").addEventListener("click", function () {
+            var newScene = (li.querySelector(".edit-scene").value || "").trim();
+            var newResponse = (li.querySelector(".edit-response").value || "").trim();
+            if (!newScene || !newResponse) return;
+            if (isLibrary) {
+              var list = getStrategiesForType(typeId);
+              var idx = list.findIndex(function (x) { return x.id === s.id; });
+              if (idx !== -1) { list[idx].scene = newScene; list[idx].response = newResponse; setStrategiesForType(typeId, list); }
+              renderTypeList();
+            } else {
+              var item = currentMeetingStrategies.filter(function (x) { return x.id === s.id; })[0];
+              if (item) { item.scene = newScene; item.response = newResponse; }
+              renderCurrentStrategyList();
+            }
+          });
+          li.querySelector(".cancel-edit-btn").addEventListener("click", function () {
+            if (isLibrary) renderTypeList(); else renderCurrentStrategyList();
+          });
+        });
+        return li;
+      }
+
+      function escapeHtml(str) {
+        var div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+      }
+      function escapeAttr(str) {
+        return String(str).replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      }
+
+      // 进行会议：会议类型下拉
+      function renderMeetingTypeSelect() {
+        var types = getTypes();
+        var sel = meetingTypeSelect;
+        var v = sel.value;
+        sel.innerHTML = "<option value=\"\">请选择会议类型</option>";
+        types.forEach(function (t) {
+          var opt = document.createElement("option");
+          opt.value = t.id;
+          opt.textContent = t.name;
+          sel.appendChild(opt);
+        });
+        if (v) sel.value = v;
+      }
+
+      meetingTypeSelect.addEventListener("change", function () {
+        var typeId = this.value;
+        if (!typeId) {
+          currentMeetingStrategies = [];
+        } else {
+          var list = getStrategiesForType(typeId);
+          currentMeetingStrategies = list.map(function (s) { return { id: s.id, scene: s.scene, response: s.response }; });
+        }
+        renderCurrentStrategyList();
+      });
+
+      function renderCurrentStrategyList() {
+        currentStrategyListEl.innerHTML = "";
+        currentMeetingStrategies.forEach(function (s) {
+          currentStrategyListEl.appendChild(makeStrategyRow(s, null, false));
+        });
+        currentStrategyEmpty.style.display = currentMeetingStrategies.length ? "none" : "block";
+      }
+
+      addCurrentStrategyBtn.addEventListener("click", function () {
+        var scene = (currentSceneEl.value || "").trim();
+        var response = (currentResponseEl.value || "").trim();
+        if (!scene || !response) return;
+        currentMeetingStrategies.push({ id: id(), scene: scene, response: response });
+        currentSceneEl.value = "";
+        currentResponseEl.value = "";
+        renderCurrentStrategyList();
+      });
+
+      function renderChecklist() {
+        if (!checklistListEl) return;
+        checklistListEl.innerHTML = "";
+        checklistItems.forEach(function (item) {
+          var li = document.createElement("li");
+          li.className = "checklist-item " + (item.status === "done" ? "done" : "pending");
+          li.dataset.id = item.id;
+          var html = "<span class=\"status-dot\"></span><div class=\"content\"><span class=\"title\">" + escapeHtml(item.title) + "</span>";
+          if (item.summary) html += "<div class=\"summary\">" + escapeHtml(item.summary) + "</div>";
+          html += "</div><span class=\"actions\"><button type=\"button\" class=\"btn small delete-checklist-btn\">删除</button></span>";
+          li.innerHTML = html;
+          li.querySelector(".delete-checklist-btn").addEventListener("click", function () {
+            checklistItems = checklistItems.filter(function (x) { return x.id !== item.id; });
+            renderChecklist();
+          });
+          checklistListEl.appendChild(li);
+        });
+      }
+
+      function addChecklistItem() {
+        if (!newChecklistItemEl) return;
+        var title = (newChecklistItemEl.value || "").trim();
+        if (!title) return;
+        checklistItems.push({ id: id(), title: title, status: "pending", summary: "" });
+        newChecklistItemEl.value = "";
+        renderChecklist();
+      }
+      if (addChecklistBtn && newChecklistItemEl) {
+        addChecklistBtn.addEventListener("click", addChecklistItem);
+        newChecklistItemEl.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") { e.preventDefault(); addChecklistItem(); }
+        });
+      }
+
+      var notesLineNumbersEl = document.getElementById("notesLineNumbers");
+      var notesIndentBtn = document.getElementById("notesIndentBtn");
+      var notesOutdentBtn = document.getElementById("notesOutdentBtn");
+      var notesCopyBtn = document.getElementById("notesCopyBtn");
+
+      function updateNotesLineNumbers() {
+        if (!notesLineNumbersEl || !meetingNotesEl) return;
+        var lines = (meetingNotesEl.value || "").split("\n").length;
+        lines = Math.max(1, lines);
+        var nums = [];
+        for (var i = 1; i <= lines; i++) nums.push(i);
+        notesLineNumbersEl.textContent = nums.join("\n");
+      }
+      function notesIndent() {
+        if (!meetingNotesEl) return;
+        var ta = meetingNotesEl;
+        var start = ta.selectionStart, end = ta.selectionEnd;
+        var text = ta.value;
+        var before = text.slice(0, start);
+        var sel = text.slice(start, end);
+        var after = text.slice(end);
+        var lines = sel.split("\n");
+        var newLines = lines.map(function (l) { return "\t" + l; });
+        var newSel = newLines.join("\n");
+        ta.value = before + newSel + after;
+        ta.selectionStart = start;
+        ta.selectionEnd = start + newSel.length;
+        try { localStorage.setItem(STORAGE_MEETING_NOTES, ta.value); } catch (e) {}
+        updateNotesLineNumbers();
+      }
+      function notesOutdent() {
+        if (!meetingNotesEl) return;
+        var ta = meetingNotesEl;
+        var start = ta.selectionStart, end = ta.selectionEnd;
+        var text = ta.value;
+        var before = text.slice(0, start);
+        var sel = text.slice(start, end);
+        var after = text.slice(end);
+        var lines = sel.split("\n");
+        var newLines = lines.map(function (l) {
+          if (l.slice(0, 1) === "\t") return l.slice(1);
+          if (l.slice(0, 2) === "  ") return l.slice(2);
+          if (l.slice(0, 1) === " ") return l.slice(1);
+          return l;
+        });
+        var newSel = newLines.join("\n");
+        ta.value = before + newSel + after;
+        ta.selectionStart = start;
+        ta.selectionEnd = start + newSel.length;
+        try { localStorage.setItem(STORAGE_MEETING_NOTES, ta.value); } catch (e) {}
+        updateNotesLineNumbers();
+      }
+      function notesCopy() {
+        if (!meetingNotesEl) return;
+        var text = meetingNotesEl.value || "";
+        var lines = text.split("\n");
+        var numbered = lines.map(function (l, i) { return (i + 1) + ". " + l; }).join("\n");
+        navigator.clipboard.writeText(numbered).then(function () {
+          if (notesCopyBtn) { var orig = notesCopyBtn.textContent; notesCopyBtn.textContent = "已复制"; setTimeout(function () { notesCopyBtn.textContent = orig; }, 1500); }
+        }).catch(function () {});
+      }
+
+      if (meetingNotesEl) {
+        try {
+          var saved = localStorage.getItem(STORAGE_MEETING_NOTES);
+          if (saved) meetingNotesEl.value = saved;
+        } catch (e) {}
+        meetingNotesEl.addEventListener("input", function () {
+          try { localStorage.setItem(STORAGE_MEETING_NOTES, meetingNotesEl.value); } catch (e) {}
+          updateNotesLineNumbers();
+        });
+        meetingNotesEl.addEventListener("focus", function () {
+          meetingNotesEl.scrollTop = meetingNotesEl.scrollHeight;
+        });
+        meetingNotesEl.addEventListener("keydown", function (e) {
+          if (e.key === "Tab") { e.preventDefault(); if (e.shiftKey) notesOutdent(); else notesIndent(); }
+        });
+        updateNotesLineNumbers();
+      }
+      if (notesIndentBtn) notesIndentBtn.addEventListener("click", notesIndent);
+      if (notesOutdentBtn) notesOutdentBtn.addEventListener("click", notesOutdent);
+      if (notesCopyBtn) notesCopyBtn.addEventListener("click", notesCopy);
+      if (meetingNotesEl && notesLineNumbersEl) {
+        meetingNotesEl.addEventListener("scroll", function () {
+          notesLineNumbersEl.scrollTop = meetingNotesEl.scrollTop;
+        });
+      }
+
+      // 转写方式切换
+      var transcriptWrap = document.getElementById("transcriptWrap");
+      document.querySelectorAll("input[name=\"inputMode\"]").forEach(function (radio) {
+        radio.addEventListener("change", function () {
+          var isManual = this.value === "manual";
+          if (transcriptWrap) transcriptWrap.classList.toggle("manual-mode", isManual);
+          if (isManual) {
+            updateTranscriptDisplay();
+            matchAndSuggest("");
+          } else {
+            if (manualTranscript) manualTranscript.value = "";
+            updateTranscriptDisplay();
+          }
+        });
+      });
+
+      // 手动输入：内容变化时更新转写并触发策略匹配
+      if (manualTranscript) {
+        manualTranscript.addEventListener("input", function () {
+          fullTranscript = (manualTranscript.value || "").trim();
+          updateTranscriptDisplay();
+          matchAndSuggest("");
+        });
+      }
+
+      // 会议折叠面板
+      document.querySelectorAll(".meeting-accordion-head").forEach(function (head) {
+        head.addEventListener("click", function () {
+          var accordion = head.closest(".meeting-accordion");
+          if (accordion) accordion.classList.toggle("expanded");
+        });
+      });
+
+      // 会议设置按钮：点击切换下拉显示
+      var setupToggleBtn = document.getElementById("setupToggleBtn");
+      var setupDropdown = document.getElementById("setupDropdown");
+      if (setupToggleBtn && setupDropdown) {
+        setupToggleBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          setupDropdown.classList.toggle("open");
+        });
+        document.addEventListener("click", function (e) {
+          if (!setupDropdown.contains(e.target) && !setupToggleBtn.contains(e.target)) {
+            setupDropdown.classList.remove("open");
+          }
+        });
+      }
+
+      // Tab 切换
+      document.querySelectorAll(".tab-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var tab = this.dataset.tab;
+          document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.remove("active"); });
+          this.classList.add("active");
+          viewLibrary.classList.toggle("active", tab === "library");
+          viewMeeting.classList.toggle("active", tab === "meeting");
+        });
+      });
+
+      addTypeBtn.addEventListener("click", function () {
+        var name = (newTypeNameEl.value || "").trim();
+        if (!name) return;
+        var types = getTypes();
+        types.push({ id: id(), name: name });
+        setTypes(types);
+        newTypeNameEl.value = "";
+        renderTypeList();
+        renderMeetingTypeSelect();
+      });
+
+      // 录音与建议
+      var recognition = null;
+      var recognizing = false;
+      var recordingSessionActive = false;
+      var transcriptSegments = [];
+      var interimText = "";
+      var currentSpeaker = "我";
+      var suggestedScenes = {};
+      var mediaRecorder = null;
+      var audioChunks = [];
+      var micStream = null;
+      var replayPanel = document.getElementById("replayPanel");
+      var replayAudio = document.getElementById("replayAudio");
+      var downloadRecording = document.getElementById("downloadRecording");
+      var switchSpeakerBtn = document.getElementById("switchSpeakerBtn");
+      var currentSpeakerLabel = document.getElementById("currentSpeakerLabel");
+
+      function getFullTranscriptText() {
+        if (isManualInputMode() && manualTranscript) return (manualTranscript.value || "").trim();
+        var parts = transcriptSegments.map(function (s) { return s.text; });
+        if (interimText) parts.push(interimText);
+        return parts.join("\n");
+      }
+
+      function setStatus(text) { statusEl.textContent = text; }
+      function setButtonsForRecording(isRecording) {
+        startBtn.disabled = isRecording;
+        stopBtn.disabled = !isRecording;
+        if (startBtn) startBtn.classList.toggle("recording", isRecording);
+        if (switchSpeakerBtn) switchSpeakerBtn.disabled = !isRecording;
+      }
+      function isManualInputMode() {
+        var r = document.querySelector("input[name=\"inputMode\"]:checked");
+        return r && r.value === "manual";
+      }
+      function updateTranscriptDisplay() {
+        var container = transcriptEl;
+        container.classList.remove("empty");
+        if (isManualInputMode() && manualTranscript) {
+          var v = (manualTranscript.value || "").trim();
+          if (!v) {
+            container.innerHTML = "<span class=\"empty\">在左侧输入或粘贴会议内容。</span>";
+            container.classList.add("empty");
+          } else {
+            container.textContent = v;
+          }
+          return;
+        }
+        var wrap = document.createElement("div");
+        wrap.className = "transcript-segments";
+        var items = transcriptSegments.slice().reverse();
+        items.forEach(function (s) {
+          wrap.appendChild(makeSegmentEl(s.speaker, s.text, false));
+        });
+        if (interimText) {
+          wrap.appendChild(makeSegmentEl(currentSpeaker, interimText, true));
+        }
+        if (wrap.children.length === 0) {
+          container.innerHTML = "<span class=\"empty\">开始录音后，这里会出现实时转写的会议内容。</span>";
+          container.classList.add("empty");
+        } else {
+          container.innerHTML = "";
+          container.appendChild(wrap);
+        }
+      }
+      function makeSegmentEl(speaker, text, isInterim) {
+        var div = document.createElement("div");
+        div.className = "transcript-seg" + (isInterim ? " interim" : "");
+        div.innerHTML = "<span class=\"speaker\">" + escapeHtml(speaker) + ":</span><span class=\"text\">" + escapeHtml(text) + "</span>";
+        return div;
+      }
+
+      function addSuggestion(obj) {
+        hidePlaceholder();
+        var noMatch = suggestionsEl.querySelector(".suggestion-no-match");
+        if (noMatch) noMatch.remove();
+        var li = document.createElement("li");
+        li.className = "suggestion-item";
+        li.innerHTML = "<div class=\"suggestion-label\"><span class=\"suggestion-label-dot\"></span><span>" + escapeHtml(obj.label || "建议") + "</span></div><p class=\"suggestion-text\">" + escapeHtml(obj.text) + "</p>";
+        suggestionsEl.insertBefore(li, suggestionsEl.firstChild);
+        var items = suggestionsEl.querySelectorAll(".suggestion-item");
+        for (var i = 6; i < items.length; i++) items[i].remove();
+      }
+
+      var semanticMatchTimer = null;
+      var semanticMatchInProgress = false;
+
+      function matchAndSuggest(latestChunk) {
+        var fullText = getFullTranscriptText();
+        var hasStrategies = currentMeetingStrategies.length > 0;
+        var hasChecklist = checklistItems.some(function (c) { return c.status === "pending"; });
+        if (!fullText.trim()) {
+          if (hasStrategies || hasChecklist) showNoMatchYet();
+          return;
+        }
+        if (!hasStrategies && !hasChecklist) return;
+        showMatchingStatus();
+        if (semanticMatchTimer) clearTimeout(semanticMatchTimer);
+        semanticMatchTimer = setTimeout(function () {
+          semanticMatchTimer = null;
+          semanticMatchWithAI(fullText);
+        }, 400);
+      }
+
+      function showMatchingStatus() {
+        if (semanticMatchInProgress) return;
+        var placeholder = document.getElementById("suggestionsPlaceholder");
+        if (!placeholder) {
+          placeholder = document.createElement("li");
+          placeholder.id = "suggestionsPlaceholder";
+          placeholder.className = "suggestion-placeholder";
+          suggestionsEl.appendChild(placeholder);
+        }
+        placeholder.textContent = "正在语义匹配…";
+        placeholder.classList.add("visible");
+      }
+
+      function showNoMatchYet() {
+        var placeholder = document.getElementById("suggestionsPlaceholder");
+        if (!placeholder) {
+          placeholder = document.createElement("li");
+          placeholder.id = "suggestionsPlaceholder";
+          placeholder.className = "suggestion-placeholder";
+          suggestionsEl.appendChild(placeholder);
+        }
+        placeholder.textContent = "暂无匹配，继续发言后将实时匹配";
+        placeholder.classList.add("visible");
+      }
+
+      function hidePlaceholder() {
+        var placeholder = document.getElementById("suggestionsPlaceholder");
+        if (placeholder) placeholder.classList.remove("visible");
+      }
+
+      var lastSummaryUpdateLen = 0;
+      var summaryUpdateTimer = null;
+      function scheduleChecklistSummaryUpdate(transcript) {
+        var doneItems = checklistItems.filter(function (c) { return c.status === "done"; });
+        if (doneItems.length === 0) return;
+        if (transcript.length - lastSummaryUpdateLen < 300) return;
+        if (summaryUpdateTimer) clearTimeout(summaryUpdateTimer);
+        summaryUpdateTimer = setTimeout(function () {
+          summaryUpdateTimer = null;
+          lastSummaryUpdateLen = transcript.length;
+          doneItems.forEach(function (item) {
+            generateChecklistSummary(item.id, item.title, transcript);
+          });
+        }, 800);
+      }
+
+      function generateChecklistSummary(itemId, itemTitle, transcript) {
+        var apiKey = localStorage.getItem("meetingStrategy_apiKey") || DEFAULT_AI_KEY;
+        var url = GEMINI_API + "?key=" + encodeURIComponent(apiKey);
+        var recent = transcript.slice(-600);
+        var prompt = "根据以下会议转写，用1-2句话总结关于「" + itemTitle + "」的讨论内容，限80字内。只输出总结，不要解释。";
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt + "\n\n会议转写：\n" + recent }] }], generationConfig: { temperature: 0.3 } })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var summary = "";
+            if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+              summary = (data.candidates[0].content.parts[0].text || "").trim();
+            }
+            var item = checklistItems.filter(function (c) { return c.id === itemId; })[0];
+            if (item && summary) { item.summary = summary; renderChecklist(); }
+          })
+          .catch(function () {});
+      }
+
+      function semanticMatchWithAI(transcript) {
+        var recent = transcript.slice(-800);
+        if (!recent.trim()) { hidePlaceholder(); return; }
+        var strategies = currentMeetingStrategies.filter(function (s) { return (s.scene || "").trim() && (s.response || "").trim(); });
+        var pendingChecklist = checklistItems.filter(function (c) { return c.status === "pending"; });
+        if (strategies.length === 0 && pendingChecklist.length === 0) { hidePlaceholder(); return; }
+        semanticMatchInProgress = true;
+        var apiKey = localStorage.getItem("meetingStrategy_apiKey") || DEFAULT_AI_KEY;
+        var url = GEMINI_API + "?key=" + encodeURIComponent(apiKey);
+        var sceneList = strategies.length > 0 ? strategies.map(function (s, i) { return i + ". " + (s.scene || "").trim(); }).join("\n") : "";
+        var clList = pendingChecklist.length > 0 ? pendingChecklist.map(function (c, i) { return i + ". " + c.title; }).join("\n") : "";
+        var prompt = "你是会议分析助手。必须基于**语义理解**（而非关键词匹配）判断：会议转写中是否出现了与各场景/待沟通事项**意思相近**的讨论。\n\n" +
+          "会议转写：\n" + recent + "\n\n" +
+          (sceneList ? "场景列表（编号从0开始，按语义匹配）：\n" + sceneList + "\n\n" : "") +
+          (clList ? "待沟通清单（编号从0开始，按语义匹配）：\n" + clList + "\n\n" : "") +
+          "只输出一个 JSON 对象：{\"strategies\":[匹配的场景编号],\"checklist\":[已讨论的待沟通编号]}。无匹配则对应为 []。不要解释。";
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2 } })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var content = "";
+            if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+              content = (data.candidates[0].content.parts[0].text || "").trim();
+            }
+            content = content.replace(/^```[\w]*\n?|\n?```$/g, "").trim();
+            var stratIndices = [];
+            var clIndices = [];
+            try {
+              var parsed = JSON.parse(content);
+              stratIndices = (parsed.strategies && Array.isArray(parsed.strategies)) ? parsed.strategies.filter(function (n) { return typeof n === "number" && n >= 0 && n < strategies.length; }) : [];
+              clIndices = (parsed.checklist && Array.isArray(parsed.checklist)) ? parsed.checklist.filter(function (n) { return typeof n === "number" && n >= 0 && n < pendingChecklist.length; }) : [];
+            } catch (e) {
+              var objM = content.match(/\{[^}]*\}/);
+              if (objM) try { var p = JSON.parse(objM[0]); stratIndices = p.strategies || []; clIndices = p.checklist || []; } catch (e2) {}
+            }
+            hidePlaceholder();
+            semanticMatchInProgress = false;
+            var oldNoMatch = suggestionsEl.querySelector(".suggestion-no-match");
+            if (oldNoMatch) oldNoMatch.remove();
+            stratIndices.forEach(function (idx) {
+              var s = strategies[idx];
+              if (!s) return;
+              var sceneKey = (s.scene || "").trim();
+              if (suggestedScenes[sceneKey]) return;
+              suggestedScenes[sceneKey] = true;
+              addSuggestion({ label: "场景：" + (sceneKey || "").slice(0, 30), text: s.response });
+            });
+            if (strategies.length > 0 && stratIndices.length === 0) {
+              var noMatch = document.createElement("li");
+              noMatch.className = "suggestion-no-match";
+              noMatch.textContent = "暂无语义匹配的策略，继续发言后将实时匹配";
+              suggestionsEl.appendChild(noMatch);
+            }
+            clIndices.forEach(function (idx) {
+              var item = pendingChecklist[idx];
+              if (!item) return;
+              item.status = "done";
+              renderChecklist();
+              generateChecklistSummary(item.id, item.title, transcript);
+            });
+            scheduleChecklistSummaryUpdate(transcript);
+          })
+          .catch(function () {
+            hidePlaceholder();
+            semanticMatchInProgress = false;
+            var errLi = document.createElement("li");
+            errLi.className = "suggestion-placeholder";
+            errLi.textContent = "匹配失败，请检查网络或 API Key";
+            suggestionsEl.appendChild(errLi);
+          });
+      }
+
+      function correctTranscriptWithAI(rawText, segmentId, contextBefore) {
+        var apiKey = localStorage.getItem("meetingStrategy_apiKey") || DEFAULT_AI_KEY;
+        var url = GEMINI_API + "?key=" + encodeURIComponent(apiKey);
+        var prompt = "你是语音识别纠错助手。请根据语境纠正以下语音识别结果中的错误（如：同音字、错别字、漏字）。\n\n" +
+          (contextBefore ? "前文语境：\n" + contextBefore + "\n\n" : "") +
+          "待纠正的识别结果：\n" + rawText + "\n\n" +
+          "要求：只输出纠正后的完整句子，不要解释、不要加引号、不要输出其他内容。若原文已正确则直接输出原文。";
+        fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1 } })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var corrected = "";
+            if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+              corrected = (data.candidates[0].content.parts[0].text || "").trim().replace(/^["""]|["""]$/g, "");
+            }
+            var seg = transcriptSegments.filter(function (s) { return s.id === segmentId; })[0];
+            if (corrected && seg) {
+              seg.text = corrected;
+              updateTranscriptDisplay();
+              matchAndSuggest(corrected);
+            }
+          })
+          .catch(function () {});
+      }
+
+      function initSpeechRecognition(stream) {
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+          setStatus("当前浏览器不支持 Web Speech API。");
+          return null;
+        }
+        var rec = new SpeechRecognition();
+        rec.lang = "zh-CN";
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.maxAlternatives = 3;
+        rec.onstart = function () { recognizing = true; setStatus("录音中，正在实时转写……"); };
+        rec.onerror = function (e) { setStatus("语音识别出错：" + (e.error || "未知")); };
+        rec.onend = function () {
+          recognizing = false;
+          if (recordingSessionActive) {
+            setStatus("语音识别已恢复，继续转写…");
+            try { rec.start(); } catch (e) { setStatus("语音识别恢复失败"); }
+          } else {
+            setStatus("录音已停止");
+            setButtonsForRecording(false);
+          }
+        };
+        rec.onresult = function (event) {
+          var finalChunk = "";
+          var newInterim = "";
+          for (var i = event.resultIndex; i < event.results.length; i++) {
+            var res = event.results[i];
+            var text = "";
+            if (res[0] && res[0].transcript) text = res[0].transcript.trim();
+            if (!text && res.length > 1 && res[1] && res[1].transcript) text = res[1].transcript.trim();
+            if (res.isFinal) {
+              if (text) {
+                var segId = id();
+                transcriptSegments.unshift({ id: segId, speaker: currentSpeaker, text: text });
+                finalChunk = text;
+                var ctx = transcriptSegments.slice(1, 4).map(function (s) { return s.text; }).join("\n");
+                correctTranscriptWithAI(text, segId, ctx);
+              }
+            } else {
+              newInterim = text;
+            }
+          }
+          interimText = newInterim;
+          updateTranscriptDisplay();
+          if (finalChunk) matchAndSuggest(finalChunk);
+        };
+        return rec;
+      }
+
+      function ensureMicPermission() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setStatus("请用 Live Server 打开本页（http://127.0.0.1 或 localhost）以使用麦克风。");
+          return Promise.reject(new Error("No getUserMedia"));
+        }
+        return navigator.mediaDevices.getUserMedia({ audio: true })
+          .catch(function () {
+            setStatus("无法访问麦克风，请检查权限或使用 Live Server 打开。");
+            throw new Error("Mic denied");
+          });
+      }
+
+      function startRecording() {
+        setStatus("正在请求麦克风权限…");
+        ensureMicPermission()
+          .then(function (stream) {
+            micStream = stream;
+            if (!recognition) recognition = initSpeechRecognition(stream);
+            if (!recognition) { stream.getTracks().forEach(function (t) { t.stop(); }); return; }
+            transcriptSegments = [];
+            interimText = "";
+            suggestedScenes = {};
+            audioChunks = [];
+            try {
+              mediaRecorder = new MediaRecorder(stream);
+              mediaRecorder.ondataavailable = function (e) { if (e.data.size > 0) audioChunks.push(e.data); };
+              mediaRecorder.start(1000);
+            } catch (e) { console.warn("MediaRecorder not supported:", e); }
+            updateTranscriptDisplay();
+            suggestionsEl.innerHTML = "";
+            hidePlaceholder();
+            recordingSessionActive = true;
+            recognition.start();
+            setButtonsForRecording(true);
+            if (replayPanel) replayPanel.classList.remove("visible");
+            try {
+              var el = viewMeeting;
+              if (el && el.requestFullscreen) el.requestFullscreen();
+              else if (el && el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            } catch (e) {}
+          })
+          .catch(function () { setButtonsForRecording(false); });
+      }
+
+      function stopRecording() {
+        try {
+          if (document.fullscreenElement || document.webkitFullscreenElement) {
+            if (document.exitFullscreen) document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          }
+        } catch (e) {}
+        if (recognition && recognizing) { recognition.stop(); recognizing = false; }
+        interimText = "";
+        updateTranscriptDisplay();
+        setButtonsForRecording(false);
+        if (micStream) {
+          micStream.getTracks().forEach(function (t) { t.stop(); });
+          micStream = null;
+        }
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+          mediaRecorder.onstop = function () {
+            if (audioChunks.length > 0) {
+              var blob = new Blob(audioChunks, { type: "audio/webm" });
+              var url = URL.createObjectURL(blob);
+              if (replayAudio) { replayAudio.src = url; replayAudio.load(); }
+              if (downloadRecording) { downloadRecording.href = url; downloadRecording.download = "meeting-" + new Date().toISOString().slice(0, 19).replace(/[:-]/g, "") + ".webm"; }
+              if (replayPanel) replayPanel.classList.add("visible");
+            }
+            mediaRecorder = null;
+          };
+        }
+      }
+
+      if (switchSpeakerBtn && currentSpeakerLabel) {
+        switchSpeakerBtn.addEventListener("click", function () {
+          currentSpeaker = currentSpeaker === "我" ? "对方" : "我";
+          currentSpeakerLabel.textContent = currentSpeaker;
+        });
+      }
+
+      startBtn.addEventListener("click", startRecording);
+      stopBtn.addEventListener("click", stopRecording);
+
+      renderTypeList();
+      renderMeetingTypeSelect();
+      renderCurrentStrategyList();
+      renderChecklist();
+      updateTranscriptDisplay();
+      setStatus("麦克风未启用");
+})();
+    </script>
+  </body>
+</html>

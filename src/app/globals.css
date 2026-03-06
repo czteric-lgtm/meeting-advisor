@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+html,
+body,
+:root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-950 text-slate-50;
+}
+
+.app-shell {
+  @apply flex min-h-screen bg-slate-950 text-slate-50;
+}
+
+.app-sidebar {
+  @apply flex h-screen w-64 flex-col border-r border-slate-800 bg-slate-950/80 backdrop-blur;
+}
+
+.app-main {
+  @apply flex-1 overflow-hidden;
+}
+
+.app-scroll {
+  @apply h-screen overflow-y-auto;
+}
+
+
