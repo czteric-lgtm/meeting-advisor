@@ -1,9 +1,8 @@
-[build]
-builder = "nixpacks"
+[phases.build]
+cmds = ["npm ci", "npm run build"]
+
+[phases.setup]
+nixPkgs = ["nodejs_18"]
 
 [deploy]
 startCommand = "npm start"
-healthcheckPath = "/api/health"
-healthcheckTimeout = 100
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 3
